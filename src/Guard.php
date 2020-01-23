@@ -44,12 +44,12 @@ class Guard
     public function __invoke(Request $request)
     {
         if ($user = $this->auth->guard('web')->user()) {
-            return $this->supportsTokens()
+            return $this->supportsTokens($user)
                         ? $user->withAccessToken(new TransientToken)
                         : $user;
         }
 
-        if ($this->supportsTokens() && $token = $request->bearerToken()) {
+        if ($token = $request->bearerToken()) {
             $model = Airlock::$personalAccessTokenModel;
 
             $accessToken = $model::where('token', hash('sha256', $token))->first();
@@ -60,21 +60,22 @@ class Guard
                 return;
             }
 
-            return $accessToken->user->withAccessToken(
+            return $this->supportsTokens($accessToken->tokenable) ? $accessToken->tokenable->withAccessToken(
                 tap($accessToken->forceFill(['last_used_at' => now()]))->save()
-            );
+            ) : null;
         }
     }
 
     /**
-     * Determine if the user model supports API tokens.
+     * Determine if the tokenable model supports API tokens.
      *
+     * @param  mixed  $tokenable
      * @return bool
      */
-    protected function supportsTokens()
+    protected function supportsTokens($tokenable = null)
     {
         return in_array(HasApiTokens::class, class_uses_recursive(
-            $this->auth->guard('web')->getProvider()->getModel()
+            $tokenable ? get_class($tokenable) : null
         ));
     }
 }

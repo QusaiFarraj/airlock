@@ -3,8 +3,9 @@
 namespace Laravel\Airlock;
 
 use Illuminate\Database\Eloquent\Model;
+use Laravel\Airlock\Contracts\HasAbilities;
 
-class PersonalAccessToken extends Model
+class PersonalAccessToken extends Model implements HasAbilities
 {
     /**
      * The attributes that should be cast to native types.
@@ -14,7 +15,6 @@ class PersonalAccessToken extends Model
     protected $casts = [
         'abilities' => 'json',
         'last_used_at' => 'datetime',
-        'expires_at' => 'datetime',
     ];
 
     /**
@@ -38,11 +38,11 @@ class PersonalAccessToken extends Model
     ];
 
     /**
-     * Get the user that the access token belongs to.
+     * Get the tokenable model that the access token belongs to.
      */
-    public function user()
+    public function tokenable()
     {
-        return $this->belongsTo(Airlock::userModel());
+        return $this->morphTo('tokenable');
     }
 
     /**

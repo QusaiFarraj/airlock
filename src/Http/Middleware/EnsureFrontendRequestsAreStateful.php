@@ -27,7 +27,7 @@ class EnsureFrontendRequestsAreStateful
             \Illuminate\Cookie\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
-            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+            config('airlock.middleware.verify_csrf_token', \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class),
         ] : [])->then(function ($request) use ($next) {
             return $next($request);
         });
@@ -41,7 +41,6 @@ class EnsureFrontendRequestsAreStateful
     protected function configureSecureCookieSessions()
     {
         config([
-            'session.driver' => 'cookie',
             'session.http_only' => true,
             'session.same_site' => 'lax',
         ]);

@@ -1,4 +1,4 @@
-# Laravel Airlock
+<p align="center"><img src="https://laravel.com/assets/img/components/logo-airlock.svg"></p>
 
 <p align="center">
 <a href="https://travis-ci.org/laravel/airlock"><img src="https://travis-ci.org/laravel/airlock.svg" alt="Build Status"></a>
@@ -19,7 +19,7 @@ You may install Laravel Airlock via Composer:
 
 Next, you should publish the Airlock configuration and migration files using the `vendor:publish` Artisan command. The `airlock` configuration file will be placed in your `config` directory:
 
-    php artisan vendor:publish
+    php artisan vendor:publish --provider="Laravel\Airlock\AirlockServiceProvider"
 
 Finally, you should run your database migrations:
 
@@ -68,12 +68,22 @@ Route::middleware('auth:airlock,passport')->get('/user', function (Request $requ
 To authenticate your SPA, your SPA's login page should first make a request to the `/airlock/csrf-cookie` route to initialize CSRF protection for the application:
 
 ```js
+axios.defaults.withCredentials = true;
+
 axios.get('/airlock/csrf-cookie').then(response => {
     // Login...
 });
 ```
 
 Once CSRF protection has been initialized, you should make a `POST` request to the typical Laravel `/login` route. If the request is successful, you will be authenticated and subsequent requests to your API routes will automatically be authenticated.
+
+#### CORS & Cookies
+
+If you are having trouble authenticating with your application from an SPA that executes on a separate subdomain, you have likely misconfigured your CORS or session cookie settings. You should ensure that your application's CORS configuration is returning the `Access-Control-Allow-Credentials` header with a value of `True`.
+
+In addition, you should ensure your application's session cookie domain configuration supports any subdomain of your root domain. You may do this by prefixing the domain with a leading `.`:
+
+    'domain' => '.domain.com',
 
 ## Issuing API Tokens
 
@@ -126,7 +136,7 @@ The `tokenCan` method will always return `true` if the incoming authenticated re
 
 ### Authenticating Mobile Applications
 
-You may use Airlock tokens to authenticate your mobile application's requests to your API. To get started, create a route that accepts the user's email / username and password and exchanges them for a new Airlock token. You may then store the token on your device and use it to make additional API requests:
+You may use Airlock tokens to authenticate your mobile application's requests to your API. To get started, create a route that accepts the user's email / username, password, and device name, then exchanges them for a new Airlock token. You may then store the token on your device and use it to make additional API requests:
 
 ```php
 use App\User;
@@ -137,7 +147,8 @@ use Illuminate\Validation\ValidationException;
 Route::post('/airlock/token', function (Request $request) {
     $request->validate([
         'email' => 'required|email',
-        'password' => 'required'
+        'password' => 'required',
+        'device_name' => 'required'
     ]);
 
     $user = User::where('email', $request->email)->first();
@@ -164,7 +175,7 @@ Within your web application's UI, you may wish to list each of the user's tokens
 
 ## Customization
 
-You may customize the "user" model and the personal access token model used by Airlock via the `useUserModel` and `usePersonalAccessTokenModel` methods. Typically, you should call these methods from the `boot` method of your `AppServiceProvider`:
+You may customize the personal access token model used by Airlock via the `usePersonalAccessTokenModel` methods. Typically, you should call this method from the `boot` method of your `AppServiceProvider`:
 
 ```php
 use App\Airlock\CustomPersonalAccessToken;
@@ -173,12 +184,40 @@ use Laravel\Airlock\Airlock;
 
 public function boot()
 {
-    Airlock::useUserModel(CustomUser::class);
-
     Airlock::usePersonalAccessTokenModel(
         CustomPersonalAccessToken::class
     );
 }
+```
+
+## Testing
+
+While testing, the `Airlock::actingAs` method may be used to authenticate a user and specify which abilities are granted to their token:
+
+```php
+use App\User;
+use Laravel\Airlock\Airlock;
+
+public function test_task_list_can_be_retrieved()
+{
+    Airlock::actingAs(
+        factory(User::class)->create(),
+        ['view-tasks']
+    );
+
+    $response = $this->get('/api/task');
+
+    $response->assertOk();
+}
+```
+
+If you would like to grant all abilities to the token, you should include `*` in your ability list:
+
+```php
+Airlock::actingAs(
+    factory(User::class)->create(),
+    ['*']
+);
 ```
 
 ## Contributing
@@ -191,7 +230,7 @@ In order to ensure that the Laravel community is welcoming to all, please review
 
 ## Security Vulnerabilities
 
-Please review [our security policy](https://github.com/laravel/passport/security/policy) on how to report security vulnerabilities.
+Please review [our security policy](https://github.com/laravel/airlock/security/policy) on how to report security vulnerabilities.
 
 ## License
 

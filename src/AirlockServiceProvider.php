@@ -77,10 +77,12 @@ class AirlockServiceProvider extends ServiceProvider
             return;
         }
 
-        Route::get(
-            '/airlock/csrf-cookie',
-            CsrfCookieController::class.'@show'
-        )->middleware('web');
+        Route::group(['prefix' => config('airlock.prefix', 'airlock')], function () {
+            Route::get(
+                '/csrf-cookie',
+                CsrfCookieController::class.'@show'
+            )->middleware('web');
+        });
     }
 
     /**
@@ -91,7 +93,7 @@ class AirlockServiceProvider extends ServiceProvider
     protected function configureGuard()
     {
         Auth::resolved(function ($auth) {
-            $auth->viaRequest('airlock', new Guard($auth));
+            $auth->viaRequest('airlock', new Guard($auth, config('airlock.expiration')));
         });
     }
 
